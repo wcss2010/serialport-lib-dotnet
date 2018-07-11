@@ -34,7 +34,6 @@ namespace SerialPortLib
     /// </summary>
     public class SerialPortInput
     {
-
         #region Private Fields
 
         internal static Logger logger = LogManager.GetCurrentClassLogger();
@@ -44,6 +43,8 @@ namespace SerialPortLib
         private int _baudRate = 115200;
         private StopBits _stopBits = StopBits.One;
         private Parity _parity = Parity.None;
+        private int _readTimeout = -1;
+        private int _writeTimeout = -1;
 
         // Read/Write error state variable
         private bool gotReadWriteError = true;
@@ -136,7 +137,7 @@ namespace SerialPortLib
         /// <param name="baudrate">Baudrate.</param>
         /// <param name="stopbits">Stopbits.</param>
         /// <param name="parity">Parity.</param>
-        public void SetPort(string portname, int baudrate = 115200, StopBits stopbits = StopBits.One, Parity parity = Parity.None)
+        public void SetPort(string portname, int baudrate = 115200, StopBits stopbits = StopBits.One, Parity parity = Parity.None,int readTimeout = -1,int writeTimeout = -1)
         {
             if (_portName != portname)
             {
@@ -148,6 +149,8 @@ namespace SerialPortLib
             _baudRate = baudrate;
             _stopBits = stopbits;
             _parity = parity;
+            _readTimeout = readTimeout;
+            _writeTimeout = writeTimeout;
         }
 
         /// <summary>
@@ -201,6 +204,8 @@ namespace SerialPortLib
                         _serialPort.BaudRate = _baudRate;
                         _serialPort.StopBits = _stopBits;
                         _serialPort.Parity = _parity;
+                        _serialPort.ReadTimeout = _readTimeout;
+                        _serialPort.WriteTimeout = _writeTimeout;
 
                         // We are not using serialPort.DataReceived event for receiving data since this is not working under Linux/Mono.
                         // We use the readerTask instead (see below).
@@ -359,7 +364,5 @@ namespace SerialPortLib
         #endregion
 
         #endregion
-
     }
-
 }
