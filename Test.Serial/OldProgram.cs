@@ -6,12 +6,12 @@ using NLog;
 
 namespace Test.Serial
 {
-    class MainClass
+    class OldMainClass
     {
         private static string defaultPort = "/dev/ttyUSB0";
         private static SerialPortInput serialPort;
 
-        public static void Main(string[] args)
+        public static void OldMain(string[] args)
         {
             // NOTE: To disable debug output uncomment the following two lines
             //LogManager.Configuration.LoggingRules.RemoveAt(0);
