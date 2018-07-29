@@ -17,6 +17,12 @@ namespace Test.Serial
         MemoryStream ms = null;
         private SerialPortInput serialPort;
         WebSocket connection = null;
+        private string[] stringTeam;
+        private int sendIndex;
+        private int sendCount;
+        private int byteCount;
+        private int headerCount;
+        private int endCount;
 
         public Form1()
         {
@@ -42,7 +48,10 @@ namespace Test.Serial
 
         void connection_OnMessage(object sender, MessageEventArgs e)
         {
-            System.Console.WriteLine("WS:" + e.Data);
+            if (e.IsText)
+            {
+                System.Console.WriteLine("WS:" + e.Data);
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -51,7 +60,8 @@ namespace Test.Serial
             serialPort.ConnectionStatusChanged += SerialPort_ConnectionStatusChanged;
             serialPort.MessageReceived += SerialPort_MessageReceived;
 
-            serialPort.SetPort("COM7", 921600);
+            serialPort.SetPort("COM7", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, 100, -1, 11000, 33000 * 10, 33000 * 10);
+            serialPort.EnabledPrintReceiveLog = false;
             serialPort.Connect();
 
             //byte[] content = GetCommand(0, 20);
@@ -97,59 +107,82 @@ namespace Test.Serial
 
         void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            if (IndexOf(args.Data, new byte[] { 0xFD, 0x00, 0x80, 0x00 }) >= 0)
+            byteCount += args.Data.Length;
+            int startIndex = IndexOf(args.Data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
+            if (startIndex >= 0)
             {
-                if (ms != null)
-                {
-                    ms.Dispose();
-                    ms = null;
-                }
-
-                ms = new MemoryStream();
+                headerCount++;
+            }
+            int endIndex = IndexOf(args.Data, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
+            if (endIndex >= 0)
+            {
+                endCount++;
             }
 
-            if (ms != null)
+            if (IsHandleCreated)
             {
-                ms.Write(args.Data, 0, args.Data.Length);
-            }
-
-            if (ms != null)
-            {
-                byte[] content = ms.ToArray();
-                int endIndex = IndexOf(content, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
-                if (endIndex >= 0)
-                {
-                    byte[] result = new byte[endIndex + 4];
-                    Array.Copy(content, 0, result, 0, result.Length);
-
-                    if (ms != null)
+                Invoke(new MethodInvoker(delegate()
                     {
-                        ms.Dispose();
-                        ms = null;
-                    }
-
-                    if (content.Length > result.Length)
-                    {
-                        byte[] elseData = new byte[content.Length - result.Length];
-                        Array.Copy(content, result.Length, elseData, 0, elseData.Length);
-
-                        ms = new MemoryStream();
-                        ms.Write(elseData, 0, elseData.Length);
-                    }
-
-                    //需要发送数据出去
-                    ProcessVoiceData(result);
-                }
+                        label1.Text = "收到总字节数：" + byteCount + "\n,包头数：" + headerCount + "\n,包尾数：" + endCount;
+                    }));
             }
+
+            ProcessVoiceData(args.Data);
+
+            //startIndex = IndexOf(args.Data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
+            //if (startIndex >= 0)
+            //{
+            //    if (ms != null)
+            //    {
+            //        ms.Dispose();
+            //        ms = null;
+            //    }
+
+            //    ms = new MemoryStream();
+            //    ms.Write(args.Data, startIndex, args.Data.Length - startIndex);
+            //}
+            //else
+            //{
+            //    ms.Write(args.Data, 0, args.Data.Length);
+            //}
+            
+            //if (ms != null)
+            //{
+            //    byte[] content = ms.ToArray();
+            //    endIndex = IndexOf(content, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
+            //    if (endIndex >= 0)
+            //    {
+            //        byte[] result = new byte[endIndex + 4];
+            //        Array.Copy(content, 0, result, 0, result.Length);
+
+            //        if (ms != null)
+            //        {
+            //            ms.Dispose();
+            //            ms = null;
+            //        }
+
+            //        if (content.Length > result.Length)
+            //        {
+            //            byte[] elseData = new byte[content.Length - result.Length];
+            //            Array.Copy(content, result.Length, elseData, 0, elseData.Length);
+
+            //            ms = new MemoryStream();
+            //            ms.Write(elseData, 0, elseData.Length);
+            //        }
+
+            //        //需要发送数据出去
+            //        ProcessVoiceData(result);
+            //    }
+            //}
         }
 
         private void ProcessVoiceData(byte[] voiceData)
         {
-            System.Console.WriteLine("语音数据：" + BitConverter.ToString(voiceData));
+            //System.Console.WriteLine("语音数据：" + BitConverter.ToString(voiceData));
 
             try
             {
-                connection.Send(BitConverter.ToString(voiceData).Replace("-", " "));                
+                connection.Send(BitConverter.ToString(voiceData).Replace("-", " "));
             }
             catch (Exception ex)
             {
@@ -314,6 +347,45 @@ namespace Test.Serial
                 }
             }
             return -1;
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            string temp = File.ReadAllText(@"D:\MyCode\16ktest.txt");
+            stringTeam = temp.Split(new string[] { "FE 7E FF 7F" }, StringSplitOptions.None);
+            sendIndex = 0;
+            sendCount = 0;
+
+            timer1.Enabled = !timer1.Enabled;
+            if (timer1.Enabled)
+            {
+                button2.BackColor = Color.Red;
+            }
+            else
+            {
+                button2.BackColor = Color.LightGray;
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            if (sendIndex >= stringTeam.Length)
+            {
+                sendIndex = 0;
+            }
+
+            sendCount++;
+            connection.Send(stringTeam[sendIndex].Trim() + " FE 7E FF 7F");
+            sendIndex++;
+
+            this.Text = "Count:" + sendCount;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            byteCount = 0;
+            headerCount = 0;
+            endCount = 0;
         }
     }
 }
