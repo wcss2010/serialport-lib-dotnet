@@ -26,6 +26,7 @@ using System.IO.Ports;
 using System.Threading;
 
 using NLog;
+using System.Text;
 
 namespace SerialPortLib
 {
@@ -45,6 +46,10 @@ namespace SerialPortLib
         private Parity _parity = Parity.None;
         private int _readTimeout = -1;
         private int _writeTimeout = -1;
+        private Encoding _encodingConfig = Encoding.UTF8;
+        private int _receivedBytesThreshold = 1024;
+        private int _readBufferSize = 20240;
+        private int _writeBufferSize = 2048;
 
         // Read/Write error state variable
         private bool gotReadWriteError = true;
@@ -137,7 +142,7 @@ namespace SerialPortLib
         /// <param name="baudrate">Baudrate.</param>
         /// <param name="stopbits">Stopbits.</param>
         /// <param name="parity">Parity.</param>
-        public void SetPort(string portname, int baudrate = 115200, StopBits stopbits = StopBits.One, Parity parity = Parity.None,int readTimeout = -1,int writeTimeout = -1)
+        public void SetPort(string portname, int baudrate = 115200, StopBits stopbits = StopBits.One, Parity parity = Parity.None, int readTimeout = -1, int writeTimeout = -1, int receivedBytesThreshold = 1024, int readBufferSize = 20240, int writeBufferSize = 2048)
         {
             if (_portName != portname)
             {
@@ -151,6 +156,9 @@ namespace SerialPortLib
             _parity = parity;
             _readTimeout = readTimeout;
             _writeTimeout = writeTimeout;
+            _receivedBytesThreshold = receivedBytesThreshold;
+            _readBufferSize = readBufferSize;
+            _writeBufferSize = writeBufferSize;
         }
 
         /// <summary>
@@ -175,11 +183,6 @@ namespace SerialPortLib
                 }
             }
             return success;
-        }
-
-        public SerialPort SerialPortObject
-        {
-            get { return _serialPort; }
         }
 
         #endregion
@@ -211,6 +214,9 @@ namespace SerialPortLib
                         _serialPort.Parity = _parity;
                         _serialPort.ReadTimeout = _readTimeout;
                         _serialPort.WriteTimeout = _writeTimeout;
+                        _serialPort.ReceivedBytesThreshold = _receivedBytesThreshold;
+                        _serialPort.ReadBufferSize = _readBufferSize;
+                        _serialPort.WriteBufferSize = _writeBufferSize;
 
                         // We are not using serialPort.DataReceived event for receiving data since this is not working under Linux/Mono.
                         // We use the readerTask instead (see below).
