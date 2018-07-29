@@ -177,6 +177,11 @@ namespace SerialPortLib
             return success;
         }
 
+        public SerialPort SerialPortObject
+        {
+            get { return _serialPort; }
+        }
+
         #endregion
 
         #region Private members
