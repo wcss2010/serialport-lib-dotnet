@@ -191,6 +191,11 @@ namespace SerialPortLib
             return success;
         }
 
+        /// <summary>
+        /// Eabled Print Receive Log
+        /// </summary>
+        public bool EnabledPrintReceiveLog { get; set; }
+
         #endregion
 
         #region Private members
@@ -374,9 +379,15 @@ namespace SerialPortLib
         /// <param name="args">Arguments.</param>
         protected virtual void OnMessageReceived(MessageReceivedEventArgs args)
         {
-            logger.Debug(BitConverter.ToString(args.Data));
+            if (EnabledPrintReceiveLog)
+            {
+                logger.Debug(BitConverter.ToString(args.Data));
+            }
+
             if (MessageReceived != null)
+            {
                 MessageReceived(this, args);
+            }
         }
 
         #endregion
