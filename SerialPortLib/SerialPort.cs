@@ -299,14 +299,18 @@ namespace SerialPortLib
                     msglen = _serialPort.BytesToRead;
                     if (msglen > 0)
                     {
-                        byte[] message = new byte[msglen];
-                        //
-                        int readbytes = 0;
-                        while (_serialPort.Read(message, readbytes, msglen - readbytes) <= 0)
-                            ; // noop
-                        if (MessageReceived != null)
+                        byte[] message = new byte[msglen];                        
+                        int readbytes = _serialPort.Read(message, 0, message.Length);
+
+                        if (readbytes > 0)
                         {
-                            OnMessageReceived(new MessageReceivedEventArgs(message));
+                            byte[] result = new byte[readbytes];
+                            Array.Copy(message, 0, result, 0, result.Length);
+
+                            if (MessageReceived != null)
+                            {
+                                OnMessageReceived(new MessageReceivedEventArgs(result));
+                            }
                         }
                     }
                     else
