@@ -246,6 +246,7 @@ namespace SerialPortLib
                     gotReadWriteError = false;
                     // Start the Reader task
                     reader = new Thread(ReaderTask);
+                    reader.Priority = ThreadPriority.Highest;
                     reader.Start();
                     OnConnectionStatusChanged(new ConnectionStatusChangedEventArgs(true));
                 }
@@ -292,37 +293,29 @@ namespace SerialPortLib
         {
             while (IsConnected)
             {
-                int msglen = 0;
-                //
                 try
                 {
-                    msglen = _serialPort.BytesToRead;
-                    if (msglen > 0)
+                    byte[] message = new byte[_serialPort.ReadBufferSize];
+                    int readbytes = _serialPort.Read(message, 0, message.Length);
+
+                    if (readbytes > 0)
                     {
-                        byte[] message = new byte[msglen];                        
-                        int readbytes = _serialPort.Read(message, 0, message.Length);
+                        byte[] result = new byte[readbytes];
+                        Array.Copy(message, 0, result, 0, result.Length);
 
-                        if (readbytes > 0)
+                        if (MessageReceived != null)
                         {
-                            byte[] result = new byte[readbytes];
-                            Array.Copy(message, 0, result, 0, result.Length);
-
-                            if (MessageReceived != null)
-                            {
-                                OnMessageReceived(new MessageReceivedEventArgs(result));
-                            }
+                            OnMessageReceived(new MessageReceivedEventArgs(result));
                         }
                     }
-                    else
-                    {
-                        Thread.Sleep(2);
-                    }
+
                 }
                 catch (Exception e)
                 {
                     logger.Error(e);
                     gotReadWriteError = true;
-                    Thread.Sleep(1000);
+
+                    Close();
                 }
             }
         }
