@@ -88,6 +88,12 @@ namespace SerialPortLib
 
         #region Public Members
 
+        public Encoding EncodingConfig
+        {
+            get { return _encodingConfig; }
+            set { _encodingConfig = value; }
+        }
+
         /// <summary>
         /// Connect to the serial port.
         /// </summary>
@@ -217,6 +223,7 @@ namespace SerialPortLib
                         _serialPort.ReceivedBytesThreshold = _receivedBytesThreshold;
                         _serialPort.ReadBufferSize = _readBufferSize;
                         _serialPort.WriteBufferSize = _writeBufferSize;
+                        _serialPort.Encoding = _encodingConfig;
 
                         // We are not using serialPort.DataReceived event for receiving data since this is not working under Linux/Mono.
                         // We use the readerTask instead (see below).
