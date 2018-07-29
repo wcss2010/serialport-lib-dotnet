@@ -309,6 +309,11 @@ namespace SerialPortLib
                         }
                     }
 
+                    try
+                    {
+                        Thread.Sleep(5);
+                    }
+                    catch (Exception ex) { }
                 }
                 catch (Exception e)
                 {
