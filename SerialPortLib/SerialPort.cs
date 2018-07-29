@@ -288,7 +288,7 @@ namespace SerialPortLib
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        Thread.Sleep(5);
                     }
                 }
                 catch (Exception e)
