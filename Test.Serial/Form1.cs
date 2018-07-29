@@ -1,11 +1,13 @@
 ﻿using SerialPortLib;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using WebSocketSharp;
 
@@ -13,6 +15,8 @@ namespace Test.Serial
 {
     public partial class Form1 : Form
     {
+        ConcurrentQueue<byte[]> _dataQueues = new ConcurrentQueue<byte[]>();
+
         string conStr = "ws://10.1.180.54:8090/talking/offline/v1/feifei";
         MemoryStream ms = null;
         private SerialPortInput serialPort;
@@ -23,17 +27,45 @@ namespace Test.Serial
         private int byteCount;
         private int headerCount;
         private int endCount;
+        private BackgroundWorker _worker = new BackgroundWorker();
 
         public Form1()
         {
             InitializeComponent();
+
+            _worker.WorkerSupportsCancellation = true;
+            _worker.DoWork += _worker_DoWork;
+            _worker.RunWorkerAsync();
 
             connection = new WebSocket(conStr);
             connection.EmitOnPing = true;
             connection.OnMessage += connection_OnMessage;
             connection.OnError += connection_OnError;
             connection.OnClose += connection_OnClose;
-            connection.Connect();
+            //connection.Connect();
+        }
+
+        void _worker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            while (!_worker.CancellationPending)
+            {
+                if (_dataQueues.Count > 0)
+                {
+                    byte[] data = new byte[0];
+                    _dataQueues.TryDequeue(out data);
+
+                    if (data != null)
+                    {
+                        HandleVoiceData(data);
+                    }
+                }
+
+                try
+                {
+                    Thread.Sleep(5);
+                }
+                catch (Exception ex) { }
+            }
         }
 
         void connection_OnClose(object sender, CloseEventArgs e)
@@ -60,7 +92,7 @@ namespace Test.Serial
             serialPort.ConnectionStatusChanged += SerialPort_ConnectionStatusChanged;
             serialPort.MessageReceived += SerialPort_MessageReceived;
 
-            serialPort.SetPort("COM7", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, 100, -1, 11000, 33000 * 10, 33000 * 10);
+            serialPort.SetPort("COM10", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, 100, -1, 11000, 33000 * 10, 33000);
             serialPort.EnabledPrintReceiveLog = false;
             serialPort.Connect();
 
@@ -107,13 +139,18 @@ namespace Test.Serial
 
         void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            byteCount += args.Data.Length;
-            int startIndex = IndexOf(args.Data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
+            _dataQueues.Enqueue(args.Data);
+        }
+
+        private void HandleVoiceData(byte[] data)
+        {
+            byteCount += data.Length;
+            int startIndex = IndexOf(data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
             if (startIndex >= 0)
             {
                 headerCount++;
             }
-            int endIndex = IndexOf(args.Data, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
+            int endIndex = IndexOf(data, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
             if (endIndex >= 0)
             {
                 endCount++;
@@ -121,15 +158,19 @@ namespace Test.Serial
 
             if (IsHandleCreated)
             {
-                Invoke(new MethodInvoker(delegate()
+                try
+                {
+                    Invoke(new MethodInvoker(delegate()
                     {
                         label1.Text = "收到总字节数：" + byteCount + "\n,包头数：" + headerCount + "\n,包尾数：" + endCount;
                     }));
+                }
+                catch (Exception ex) { }
             }
 
-            ProcessVoiceData(args.Data);
+            ProcessVoiceData(data);
 
-            //startIndex = IndexOf(args.Data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
+            //startIndex = IndexOf(data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
             //if (startIndex >= 0)
             //{
             //    if (ms != null)
@@ -139,13 +180,13 @@ namespace Test.Serial
             //    }
 
             //    ms = new MemoryStream();
-            //    ms.Write(args.Data, startIndex, args.Data.Length - startIndex);
+            //    ms.Write(data, startIndex, data.Length - startIndex);
             //}
             //else
             //{
-            //    ms.Write(args.Data, 0, args.Data.Length);
+            //    ms.Write(data, 0, data.Length);
             //}
-            
+
             //if (ms != null)
             //{
             //    byte[] content = ms.ToArray();
@@ -182,7 +223,7 @@ namespace Test.Serial
 
             try
             {
-                connection.Send(BitConverter.ToString(voiceData).Replace("-", " "));
+                //connection.Send(BitConverter.ToString(voiceData).Replace("-", " "));
             }
             catch (Exception ex)
             {
@@ -314,6 +355,7 @@ namespace Test.Serial
         {
             serialPort.Disconnect();
             connection.Close();
+            _worker.CancelAsync();
         }
 
         /// <summary>
