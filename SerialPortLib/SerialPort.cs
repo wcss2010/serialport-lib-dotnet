@@ -311,7 +311,7 @@ namespace SerialPortLib
 
                     try
                     {
-                        Thread.Sleep(1);
+                        Thread.Sleep(5);
                     }
                     catch (Exception ex) { }
                 }
