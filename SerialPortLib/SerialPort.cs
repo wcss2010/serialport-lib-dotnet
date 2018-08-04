@@ -308,19 +308,15 @@ namespace SerialPortLib
                             OnMessageReceived(new MessageReceivedEventArgs(result));
                         }
                     }
-
-                    try
-                    {
-                        Thread.Sleep(100);
-                    }
-                    catch (Exception ex) { }
+                }catch(TimeoutException eee)
+                {
+                   //忽略超时错误
                 }
                 catch (Exception e)
                 {
                     logger.Error(e);
-                    gotReadWriteError = true;
 
-                    Close();
+                    gotReadWriteError = true;
                 }
             }
         }
