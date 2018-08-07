@@ -92,7 +92,7 @@ namespace Test.Serial
             serialPort.ConnectionStatusChanged += SerialPort_ConnectionStatusChanged;
             serialPort.MessageReceived += SerialPort_MessageReceived;
 
-            serialPort.SetBuffers(120, 4096);
+            serialPort.SetBuffers(1200, 1024);
             serialPort.SetPort("COM3", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, -1, -1);
             serialPort.EnabledPrintReceiveLog = false;
             serialPort.Connect();

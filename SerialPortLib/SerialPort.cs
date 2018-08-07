@@ -288,6 +288,8 @@ namespace SerialPortLib
                         //没有数据
                         FreeReceiveQueues.Enqueue(queueObject);
                     }
+
+                    queueObject = null;
                 }
             }
         }
