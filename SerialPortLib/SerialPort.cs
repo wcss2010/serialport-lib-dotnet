@@ -200,26 +200,26 @@ namespace SerialPortLib
                             if (queueObject != null)
                             {
                                 //尝试解析数据
+                                byte[] msg = new byte[queueObject.DataLength];
+                                if (queueObject.DataLength > 0)
+                                {
+                                    Array.Copy(queueObject.Buffer, 0, msg, 0, msg.Length);
+                                }
+                                
+                                //将数据还给Free队列
+                                queueObject.Offset = 0;
+                                queueObject.DataLength = 0;
+                                FreeReceiveQueues.Enqueue(queueObject);
+
                                 try
                                 {
-                                    if (queueObject.DataLength > 0)
-                                    {
-                                        byte[] msg = new byte[queueObject.DataLength];
-                                        Array.Copy(queueObject.Buffer, 0, msg, 0, msg.Length);
-                                        queueObject.Offset = 0;
-                                        queueObject.DataLength = 0;
-
-                                        //投递消息
-                                        OnMessageReceived(new MessageReceivedEventArgs(msg));
-                                    }
+                                    //投递消息
+                                    OnMessageReceived(new MessageReceivedEventArgs(msg));
                                 }
                                 catch (Exception ex)
                                 {
                                     logger.Error(ex.ToString(), ex);
                                 }
-
-                                //将数据还给Free队列
-                                FreeReceiveQueues.Enqueue(queueObject);
                             }
                         }
                         else
