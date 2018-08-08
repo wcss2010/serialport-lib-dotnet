@@ -224,17 +224,19 @@ namespace SerialPortLib
                         }
                         else
                         {
-                            Thread.Sleep(100);
+                            Thread.Sleep(2);
                         }
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        Thread.Sleep(2);
                     }
                 }
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString(), ex);
+
+                    Thread.Sleep(2);
                 }
             }
         }
@@ -262,18 +264,20 @@ namespace SerialPortLib
                         }
                         else
                         {
-                            Thread.Sleep(100);
+                            Thread.Sleep(2);
                             throw new Exception("对不起，队列已满!");
                         }
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        Thread.Sleep(2);
                     }
                 }
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString(), ex);
+
+                    Thread.Sleep(2);
                 }
 
                 if (queueObject != null)
