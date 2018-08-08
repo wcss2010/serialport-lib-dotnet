@@ -15,8 +15,6 @@ namespace Test.Serial
 {
     public partial class Form1 : Form
     {
-        ConcurrentQueue<byte[]> _dataQueues = new ConcurrentQueue<byte[]>();
-
         string conStr = "ws://10.1.180.54:8090/talking/offline/v1/feifei";
         MemoryStream ms = null;
         private SerialPortInput serialPort;
@@ -27,15 +25,10 @@ namespace Test.Serial
         private int byteCount;
         private int headerCount;
         private int endCount;
-        private BackgroundWorker _worker = new BackgroundWorker();
 
         public Form1()
         {
             InitializeComponent();
-
-            _worker.WorkerSupportsCancellation = true;
-            _worker.DoWork += _worker_DoWork;
-            _worker.RunWorkerAsync();
 
             connection = new WebSocket(conStr);
             connection.EmitOnPing = true;
@@ -43,29 +36,6 @@ namespace Test.Serial
             connection.OnError += connection_OnError;
             connection.OnClose += connection_OnClose;
             //connection.Connect();
-        }
-
-        void _worker_DoWork(object sender, DoWorkEventArgs e)
-        {
-            while (!_worker.CancellationPending)
-            {
-                if (_dataQueues.Count > 0)
-                {
-                    byte[] data = new byte[0];
-                    _dataQueues.TryDequeue(out data);
-
-                    if (data != null)
-                    {
-                        HandleVoiceData(data);
-                    }
-                }
-
-                try
-                {
-                    Thread.Sleep(5);
-                }
-                catch (Exception ex) { }
-            }
         }
 
         void connection_OnClose(object sender, CloseEventArgs e)
@@ -140,7 +110,7 @@ namespace Test.Serial
 
         void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            _dataQueues.Enqueue(args.Data);
+            HandleVoiceData(args.Data);
         }
 
         private void HandleVoiceData(byte[] data)
@@ -356,7 +326,7 @@ namespace Test.Serial
         {
             serialPort.Disconnect();
             connection.Close();
-            _worker.CancelAsync();
+            //_worker.CancelAsync();
         }
 
         /// <summary>
