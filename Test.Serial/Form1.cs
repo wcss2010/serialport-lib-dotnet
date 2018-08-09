@@ -115,16 +115,16 @@ namespace Test.Serial
         private void HandleVoiceData(byte[] data)
         {
             byteCount += data.Length;
-            int startIndex = IndexOf(data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
-            if (startIndex >= 0)
-            {
-                headerCount++;
-            }
-            int endIndex = IndexOf(data, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
-            if (endIndex >= 0)
-            {
-                endCount++;
-            }
+            //int startIndex = IndexOf(data, new byte[] { 0xFD, 0x00, 0x80, 0x00 });
+            //if (startIndex >= 0)
+            //{
+            //    headerCount++;
+            //}
+            //int endIndex = IndexOf(data, new byte[] { 0xFE, 0x7E, 0xFF, 0x7F });
+            //if (endIndex >= 0)
+            //{
+            //    endCount++;
+            //}
 
             if (IsHandleCreated)
             {
