@@ -25,14 +25,9 @@ namespace SerialPortLib
     public class SerialPortInput
     {
         /// <summary>
-        /// 空闲队列
+        /// 接收队列
         /// </summary>
-        protected ConcurrentQueue<ReceiveQueueObject> FreeReceiveQueues { get; set; }
-
-        /// <summary>
-        /// 等待解析队列
-        /// </summary>
-        protected ConcurrentQueue<ReceiveQueueObject> WaitResolveQueues { get; set; }
+        protected ConcurrentQueue<byte[]> ReceiveQueues { get; set; }
 
         /// <summary>
         /// 日志对象
@@ -126,40 +121,11 @@ namespace SerialPortLib
         }
 
         /// <summary>
-        /// 初始化缓冲区
-        /// </summary>
-        /// <param name="bufferQueueCount"></param>
-        /// <param name="bufferSize"></param>
-        public void SetBuffers(int bufferQueueCount, int bufferSize)
-        {
-            //检查初始值
-            if (bufferQueueCount <= 0 || bufferSize <= 0)
-            {
-                bufferQueueCount = 60;
-                bufferSize = 4096;
-            }
-
-            //生成队列对象
-            FreeReceiveQueues = new ConcurrentQueue<ReceiveQueueObject>();
-            WaitResolveQueues = new ConcurrentQueue<ReceiveQueueObject>();
-
-            for (int kk = 0; kk < bufferQueueCount; kk++)
-            {
-                ReceiveQueueObject rqo = new ReceiveQueueObject();
-                rqo.Buffer = new byte[bufferSize];
-                FreeReceiveQueues.Enqueue(rqo);
-            }
-        }
-
-        /// <summary>
         /// 连接
         /// </summary>
         public void Connect()
         {
-            if (FreeReceiveQueues == null)
-            {
-                return;
-            }
+            ReceiveQueues = new ConcurrentQueue<byte[]>();
 
             if (_receiveWorker != null)
             {
@@ -184,7 +150,6 @@ namespace SerialPortLib
 
         void _resolveWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            ReceiveQueueObject queueObject = null;
             BackgroundWorker obj = (BackgroundWorker)sender;
             while (!obj.CancellationPending)
             {
@@ -193,28 +158,17 @@ namespace SerialPortLib
                     if (IsConnected)
                     {
                         //可以接收
-                        if (WaitResolveQueues.Count > 0)
+                        if (ReceiveQueues.Count > 0)
                         {
-                            WaitResolveQueues.TryDequeue(out queueObject);
+                            byte[] buffer = null;
+                            ReceiveQueues.TryDequeue(out buffer);
 
-                            if (queueObject != null)
+                            if (buffer != null)
                             {
-                                //尝试解析数据
-                                byte[] msg = new byte[queueObject.DataLength];
-                                if (queueObject.DataLength > 0)
-                                {
-                                    Array.Copy(queueObject.Buffer, 0, msg, 0, msg.Length);
-                                }
-                                
-                                //将数据还给Free队列
-                                queueObject.Offset = 0;
-                                queueObject.DataLength = 0;
-                                FreeReceiveQueues.Enqueue(queueObject);
-
                                 try
                                 {
                                     //投递消息
-                                    OnMessageReceived(new MessageReceivedEventArgs(msg));
+                                    OnMessageReceived(new MessageReceivedEventArgs(buffer));
                                 }
                                 catch (Exception ex)
                                 {
@@ -243,7 +197,6 @@ namespace SerialPortLib
 
         void _receiveWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            ReceiveQueueObject queueObject = null;
             BackgroundWorker obj = (BackgroundWorker)sender;
             while (!obj.CancellationPending)
             {
@@ -252,20 +205,14 @@ namespace SerialPortLib
                     if (IsConnected)
                     {
                         //可以接收
-
-                        if (FreeReceiveQueues.Count > 0)
+                        byte[] buffer = new byte[SerialPortObject.ReadBufferSize + 1];
+                        int count = SerialPortObject.Read(buffer, 0, buffer.Length);
+                        if (count > 0)
                         {
-                            FreeReceiveQueues.TryDequeue(out queueObject);
+                            byte[] content = new byte[count];
+                            Buffer.BlockCopy(buffer, 0, content, 0, content.Length);
 
-                            if (queueObject != null)
-                            {
-                                queueObject.DataLength = SerialPortObject.Read(queueObject.Buffer, 0, queueObject.Buffer.Length);
-                            }
-                        }
-                        else
-                        {
-                            Thread.Sleep(2);
-                            throw new Exception("对不起，队列已满!");
+                            ReceiveQueues.Enqueue(content);
                         }
                     }
                     else
@@ -278,22 +225,6 @@ namespace SerialPortLib
                     logger.Error(ex.ToString(), ex);
 
                     Thread.Sleep(2);
-                }
-
-                if (queueObject != null)
-                {
-                    if (queueObject.DataLength > 0)
-                    {
-                        //有数据
-                        WaitResolveQueues.Enqueue(queueObject);
-                    }
-                    else
-                    {
-                        //没有数据
-                        FreeReceiveQueues.Enqueue(queueObject);
-                    }
-
-                    queueObject = null;
                 }
             }
         }
@@ -331,26 +262,5 @@ namespace SerialPortLib
         {
             logger.Error(e.EventType);
         }
-    }
-
-    /// <summary>
-    /// 接收队列对象
-    /// </summary>
-    public class ReceiveQueueObject
-    {
-        /// <summary>
-        /// 缓冲区
-        /// </summary>
-        public byte[] Buffer { get; set; }
-
-        /// <summary>
-        /// 偏移
-        /// </summary>
-        public int Offset { get; set; }
-
-        /// <summary>
-        /// 数据大小
-        /// </summary>
-        public int DataLength { get; set; }
     }
 }
