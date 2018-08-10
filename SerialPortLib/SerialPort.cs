@@ -27,7 +27,7 @@ namespace SerialPortLib
         /// <summary>
         /// 接收队列
         /// </summary>
-        protected ConcurrentQueue<byte[]> ReceiveQueues { get; set; }
+        protected ConcurrentQueue<QueueObject> ReceiveQueues { get; set; }
 
         /// <summary>
         /// 日志对象
@@ -125,7 +125,7 @@ namespace SerialPortLib
         /// </summary>
         public void Connect()
         {
-            ReceiveQueues = new ConcurrentQueue<byte[]>();
+            ReceiveQueues = new ConcurrentQueue<QueueObject>();
 
             if (_receiveWorker != null)
             {
@@ -160,7 +160,7 @@ namespace SerialPortLib
                         //可以接收
                         if (ReceiveQueues.Count > 0)
                         {
-                            byte[] buffer = null;
+                            QueueObject buffer = null;
                             ReceiveQueues.TryDequeue(out buffer);
 
                             if (buffer != null)
@@ -168,7 +168,10 @@ namespace SerialPortLib
                                 try
                                 {
                                     //投递消息
-                                    OnMessageReceived(new MessageReceivedEventArgs(buffer));
+                                    byte[] msg = new byte[buffer.DataLength];
+                                    Buffer.BlockCopy(buffer.Buffer, 0, msg, 0, buffer.DataLength);
+
+                                    OnMessageReceived(new MessageReceivedEventArgs(msg));
                                 }
                                 catch (Exception ex)
                                 {
@@ -205,14 +208,12 @@ namespace SerialPortLib
                     if (IsConnected)
                     {
                         //可以接收
-                        byte[] buffer = new byte[SerialPortObject.ReadBufferSize + 1];
-                        int count = SerialPortObject.Read(buffer, 0, buffer.Length);
-                        if (count > 0)
+                        QueueObject qo = new QueueObject();
+                        qo.Buffer = new byte[SerialPortObject.ReadBufferSize + 1];
+                        qo.DataLength = SerialPortObject.Read(qo.Buffer, 0, qo.Buffer.Length);
+                        if (qo.DataLength > 0)
                         {
-                            byte[] content = new byte[count];
-                            Buffer.BlockCopy(buffer, 0, content, 0, content.Length);
-
-                            ReceiveQueues.Enqueue(content);
+                            ReceiveQueues.Enqueue(qo);
                         }
                     }
                     else
@@ -262,5 +263,23 @@ namespace SerialPortLib
         {
             logger.Error(e.EventType);
         }
+    }
+
+    public class QueueObject
+    {
+        public QueueObject() { }
+
+        public QueueObject(byte[] buf, int offset, int length)
+        {
+            this.Buffer = buf;
+            this.Offset = offset;
+            this.DataLength = length;
+        }
+
+        public byte[] Buffer { get; set; }
+
+        public int Offset { get; set; }
+
+        public int DataLength { get; set; }
     }
 }
