@@ -180,6 +180,10 @@ namespace SerialPortLib
                                 OnMessageReceived(new MessageReceivedEventArgs(msg));
                             }
                         }
+                        else
+                        {
+                            Thread.Sleep(2);
+                        }
                     }
                     else
                     {
