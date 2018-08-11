@@ -212,7 +212,7 @@ namespace SerialPortLib
                         QueueObject qo = new QueueObject();
                         qo.Buffer = new byte[SerialPortObject.BytesToRead];
                         qo.DataLength = SerialPortObject.Read(qo.Buffer, 0, qo.Buffer.Length);
-                        if (qo.DataLength > 0)
+                        if (qo.DataLength > 0 && qo.Buffer.Length >= 1)
                         {
                             lock (lockObject)
                             {
