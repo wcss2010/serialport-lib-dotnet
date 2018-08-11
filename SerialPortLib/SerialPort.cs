@@ -51,7 +51,7 @@ namespace SerialPortLib
         /// <summary>
         /// 消息适配器
         /// </summary>
-        public MessageDataAdapter MessageDataAdapterObject { get; set; }
+        public IMessageDataAdapter MessageDataAdapterObject { get; set; }
 
         /// <summary>
         /// 连接状态事件
@@ -290,7 +290,7 @@ namespace SerialPortLib
         public int DataLength { get; set; }
     }
 
-    public abstract class MessageDataAdapter
+    public abstract class IMessageDataAdapter
     {
         /// <summary>
         /// 串口对象

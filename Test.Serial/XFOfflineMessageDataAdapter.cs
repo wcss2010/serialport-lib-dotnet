@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Test.Serial
 {
-    class XFOfflineMessageDataAdapter : MessageDataAdapter
+    class XFOfflineMessageDataAdapter : IMessageDataAdapter
     {
         bool resAssembling = false;
         int headerIndex = 0;
