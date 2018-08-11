@@ -174,7 +174,11 @@ namespace SerialPortLib
                         //可以接收
                         if (BufferStream.Count > 0)
                         {
-                            OnMessageReceived(new MessageReceivedEventArgs(MessageDataAdapterObject.Resolve()));
+                            byte[] msg = MessageDataAdapterObject.Resolve();
+                            if (msg != null && msg.Length >= 1)
+                            {
+                                OnMessageReceived(new MessageReceivedEventArgs(msg));
+                            }
                         }
                     }
                     else
@@ -231,10 +235,17 @@ namespace SerialPortLib
         /// </summary>
         public void Disconnect()
         {
-            _receiveWorker.CancelAsync();
-            _resolveWorker.CancelAsync();
-            _receiveWorker = null;
-            _resolveWorker = null;
+            if (_receiveWorker != null)
+            {
+                _receiveWorker.CancelAsync();
+                _receiveWorker = null;
+            }
+
+            if (_resolveWorker != null)
+            {
+                _resolveWorker.CancelAsync();
+                _resolveWorker = null;
+            }
 
             try
             {
