@@ -6,6 +6,8 @@ using NLog;
 using System.Text;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.IO;
+using System.Collections.Generic;
 
 namespace SerialPortLib
 {
@@ -27,7 +29,9 @@ namespace SerialPortLib
         /// <summary>
         /// 接收队列
         /// </summary>
-        protected ConcurrentQueue<QueueObject> ReceiveQueues { get; set; }
+        public List<byte> BufferStream { get; set; }
+
+        public static object lockObject = new object();
 
         /// <summary>
         /// 日志对象
@@ -43,6 +47,11 @@ namespace SerialPortLib
         /// 是否打印接收日志
         /// </summary>
         public bool EnabledPrintReceiveLog { get; set; }
+
+        /// <summary>
+        /// 消息适配器
+        /// </summary>
+        public MessageDataAdapter MessageDataAdapterObject { get; set; }
 
         /// <summary>
         /// 连接状态事件
@@ -125,12 +134,17 @@ namespace SerialPortLib
         /// </summary>
         public void Connect()
         {
-            ReceiveQueues = new ConcurrentQueue<QueueObject>();
-
+            BufferStream = new List<byte>();
+            if (MessageDataAdapterObject == null)
+            {
+                return;
+            }
             if (_receiveWorker != null)
             {
                 return;
             }
+            //设置串口对象
+            MessageDataAdapterObject.SerialPortInputObject = this;
 
             //打开串口
             SerialPortObject.Open();
@@ -158,30 +172,9 @@ namespace SerialPortLib
                     if (IsConnected)
                     {
                         //可以接收
-                        if (ReceiveQueues.Count > 0)
+                        if (BufferStream.Count > 0)
                         {
-                            QueueObject buffer = null;
-                            ReceiveQueues.TryDequeue(out buffer);
-
-                            if (buffer != null)
-                            {
-                                try
-                                {
-                                    //投递消息
-                                    byte[] msg = new byte[buffer.DataLength];
-                                    Buffer.BlockCopy(buffer.Buffer, 0, msg, 0, buffer.DataLength);
-
-                                    OnMessageReceived(new MessageReceivedEventArgs(msg));
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger.Error(ex.ToString(), ex);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Thread.Sleep(2);
+                            OnMessageReceived(new MessageReceivedEventArgs(MessageDataAdapterObject.Resolve()));
                         }
                     }
                     else
@@ -209,11 +202,14 @@ namespace SerialPortLib
                     {
                         //可以接收
                         QueueObject qo = new QueueObject();
-                        qo.Buffer = new byte[SerialPortObject.ReadBufferSize + 1];
+                        qo.Buffer = new byte[SerialPortObject.BytesToRead];
                         qo.DataLength = SerialPortObject.Read(qo.Buffer, 0, qo.Buffer.Length);
                         if (qo.DataLength > 0)
                         {
-                            ReceiveQueues.Enqueue(qo);
+                            lock (lockObject)
+                            {
+                                BufferStream.AddRange(qo.Buffer);
+                            }
                         }
                     }
                     else
@@ -281,5 +277,19 @@ namespace SerialPortLib
         public int Offset { get; set; }
 
         public int DataLength { get; set; }
+    }
+
+    public abstract class MessageDataAdapter
+    {
+        /// <summary>
+        /// 串口对象
+        /// </summary>
+        public SerialPortInput SerialPortInputObject { get; set; }
+
+        /// <summary>
+        /// 解析数据
+        /// </summary>
+        /// <returns></returns>
+        public abstract byte[] Resolve();
     }
 }
