@@ -177,14 +177,6 @@ namespace SerialPortLib
                 {
                     if (SerialPortObject.IsOpen)
                     {
-                        try
-                        {
-                            SerialPortObject.Write(new byte[] { }, 0, 0);
-                        }
-                        catch (Exception ex)
-                        {
-                            SerialPortObject.Close();
-                        }
                         continue;
                     }
                     else
