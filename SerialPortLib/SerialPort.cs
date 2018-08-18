@@ -177,7 +177,7 @@ namespace SerialPortLib
                 {
                     if (SerialPortObject.IsOpen)
                     {
-                        return;
+                        continue;
                     }
                     else
                     {
