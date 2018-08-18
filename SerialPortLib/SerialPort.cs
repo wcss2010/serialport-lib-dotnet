@@ -175,11 +175,7 @@ namespace SerialPortLib
             {
                 if (SerialPortObject != null)
                 {
-                    if (SerialPortObject.IsOpen)
-                    {
-                        continue;
-                    }
-                    else
+                    if (!SerialPortObject.IsOpen)
                     {
                         //重新连接
                         try
@@ -218,19 +214,19 @@ namespace SerialPortLib
                         }
                         else
                         {
-                            Thread.Sleep(2);
+                            Thread.Sleep(5);
                         }
                     }
                     else
                     {
-                        Thread.Sleep(2);
+                        Thread.Sleep(5);
                     }
                 }
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString(), ex);
 
-                    Thread.Sleep(2);
+                    Thread.Sleep(5);
                 }
             }
         }
@@ -257,19 +253,19 @@ namespace SerialPortLib
                         }
                         else
                         {
-                            Thread.Sleep(2);
+                            Thread.Sleep(5);
                         }
                     }
                     else
                     {
-                        Thread.Sleep(2);
+                        Thread.Sleep(5);
                     }
                 }
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString(), ex);
 
-                    Thread.Sleep(2);
+                    Thread.Sleep(5);
                 }
             }
         }
