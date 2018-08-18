@@ -63,7 +63,7 @@ namespace Test.Serial
             serialPort.MessageReceived += SerialPort_MessageReceived;
             serialPort.MessageDataAdapterObject = new XFOfflineMessageDataAdapter();
 
-            serialPort.SetPort("COM3", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, -1, -1);
+            serialPort.SetPort("COM4", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, -1, -1);
             serialPort.EnabledPrintReceiveLog = false;
             serialPort.Connect();
 
