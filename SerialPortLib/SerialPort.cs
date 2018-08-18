@@ -65,6 +65,7 @@ namespace SerialPortLib
 
         protected BackgroundWorker _receiveWorker = null;
         protected BackgroundWorker _resolveWorker = null;
+        protected BackgroundWorker _connectionWorker = null;
 
         /// <summary>
         /// 投递连接状态事件
@@ -160,6 +161,41 @@ namespace SerialPortLib
             _resolveWorker.WorkerSupportsCancellation = true;
             _resolveWorker.DoWork += _resolveWorker_DoWork;
             _resolveWorker.RunWorkerAsync();
+
+            //断开重连线程
+            _connectionWorker = new BackgroundWorker();
+            _connectionWorker.WorkerSupportsCancellation = true;
+            _connectionWorker.DoWork += _connectionWorker_DoWork;
+            _connectionWorker.RunWorkerAsync();
+        }
+
+        void _connectionWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            while (!((BackgroundWorker)sender).CancellationPending)
+            {
+                if (SerialPortObject != null)
+                {
+                    if (SerialPortObject.IsOpen)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        //重新连接
+                        try
+                        {
+                            SerialPortObject.Open();
+                        }
+                        catch (Exception ex) { }
+                    }
+                }
+
+                try
+                {
+                    Thread.Sleep(3000);
+                }
+                catch (Exception ex) { }
+            }
         }
 
         void _resolveWorker_DoWork(object sender, DoWorkEventArgs e)
@@ -249,6 +285,12 @@ namespace SerialPortLib
             {
                 _resolveWorker.CancelAsync();
                 _resolveWorker = null;
+            }
+
+            if (_connectionWorker != null)
+            {
+                _connectionWorker.CancelAsync();
+                _connectionWorker = null;
             }
 
             try
