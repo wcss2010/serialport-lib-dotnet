@@ -255,6 +255,10 @@ namespace SerialPortLib
                                 BufferStream.AddRange(qo.Buffer);
                             }
                         }
+                        else
+                        {
+                            Thread.Sleep(2);
+                        }
                     }
                     else
                     {
