@@ -1,4 +1,5 @@
-﻿using SerialPortLib;
+﻿using AIUISerials;
+using SerialPortLib;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,6 +16,8 @@ namespace Test.Serial
 {
     public partial class Form1 : Form
     {
+        public static AIUIConnection AIUIConnectionObj = null;
+
         string conStr = "ws://10.1.180.54:8090/talking/offline/v1/feifei";
         MemoryStream ms = null;
         private SerialPortInput serialPort;
@@ -58,14 +61,18 @@ namespace Test.Serial
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            serialPort = new SerialPortInput();
-            serialPort.ConnectionStatusChanged += SerialPort_ConnectionStatusChanged;
-            serialPort.MessageReceived += SerialPort_MessageReceived;
-            serialPort.MessageDataAdapterObject = new XFOfflineMessageDataAdapter();
+            AIUIConnectionObj = new AIUIConnection("COM4");
+            AIUIConnectionObj.AIUIConnectionReceivedEvent += AIUIConnectionObj_AIUIConnectionReceivedEvent;
+            AIUIConnectionObj.SerialPort.Connect();
 
-            serialPort.SetPort("COM4", 921600, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, -1, -1);
-            serialPort.EnabledPrintReceiveLog = false;
-            serialPort.Connect();
+            serialPort = new SerialPortInput();
+            //serialPort.ConnectionStatusChanged += SerialPort_ConnectionStatusChanged;
+            //serialPort.MessageReceived += SerialPort_MessageReceived;
+            //serialPort.MessageDataAdapterObject = new XFOnlineMessageDataAdapter();
+
+            //serialPort.SetPort("COM4", 115200, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, -1, -1);
+            //serialPort.EnabledPrintReceiveLog = false;
+            //serialPort.Connect();
 
             //byte[] content = GetCommand(0, 20);
             //StringBuilder sb = new StringBuilder();
@@ -106,6 +113,11 @@ namespace Test.Serial
             //}
             //sb.Append("]");
             //System.Console.WriteLine(sb.ToString());
+        }
+
+        void AIUIConnectionObj_AIUIConnectionReceivedEvent(object sender, AIUIConnectionReceivedEventArgs args)
+        {
+            System.Console.WriteLine("Recv:" + args.Json);
         }
 
         void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
@@ -324,6 +336,7 @@ namespace Test.Serial
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            AIUIConnectionObj.SerialPort.Disconnect();
             serialPort.Disconnect();
             connection.Close();
             //_worker.CancelAsync();

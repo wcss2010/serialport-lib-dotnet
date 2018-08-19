@@ -24,7 +24,6 @@ using System;
 
 namespace SerialPortLib
 {
-
     /// <summary>
     /// Connected state changed event arguments.
     /// </summary>
@@ -65,4 +64,3 @@ namespace SerialPortLib
         }
     }
 }
-

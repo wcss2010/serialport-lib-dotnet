@@ -26,11 +26,18 @@ namespace SerialPortLib
     /// </summary>
     public class SerialPortInput
     {
+        private List<byte> _bufferStream = new List<byte>();
         /// <summary>
-        /// 接收队列
+        /// 接收缓冲
         /// </summary>
-        public List<byte> BufferStream { get; set; }
+        public List<byte> BufferStream
+        {
+            get { return _bufferStream; }
+        }
 
+        /// <summary>
+        /// 同步锁对象
+        /// </summary>
         public static object lockObject = new object();
 
         /// <summary>
@@ -49,7 +56,7 @@ namespace SerialPortLib
         public bool EnabledPrintReceiveLog { get; set; }
 
         /// <summary>
-        /// 消息适配器
+        /// 消息适配器(用于从BufferStream中解析消息)
         /// </summary>
         public IMessageDataAdapter MessageDataAdapterObject { get; set; }
 
@@ -63,7 +70,6 @@ namespace SerialPortLib
         /// </summary>
         public event MessageReceivedEventHandler MessageReceived;
 
-        protected BackgroundWorker _receiveWorker = null;
         protected BackgroundWorker _resolveWorker = null;
         protected BackgroundWorker _connectionWorker = null;
 
@@ -135,26 +141,23 @@ namespace SerialPortLib
         /// </summary>
         public void Connect()
         {
-            BufferStream = new List<byte>();
+            //先断开连接
+            Disconnect();
+
             if (MessageDataAdapterObject == null)
             {
                 return;
             }
-            if (_receiveWorker != null)
+            if (SerialPortObject == null)
             {
                 return;
             }
+
             //设置串口对象
             MessageDataAdapterObject.SerialPortInputObject = this;
 
             //打开串口
             SerialPortObject.Open();
-
-            //创建接收线程
-            _receiveWorker = new BackgroundWorker();
-            _receiveWorker.WorkerSupportsCancellation = true;
-            _receiveWorker.DoWork += _receiveWorker_DoWork;
-            _receiveWorker.RunWorkerAsync();
 
             //创建解析线程
             _resolveWorker = new BackgroundWorker();
@@ -231,56 +234,11 @@ namespace SerialPortLib
             }
         }
 
-        void _receiveWorker_DoWork(object sender, DoWorkEventArgs e)
-        {
-            BackgroundWorker obj = (BackgroundWorker)sender;
-            while (!obj.CancellationPending)
-            {
-                try
-                {
-                    if (IsConnected)
-                    {
-                        //可以接收
-                        QueueObject qo = new QueueObject();
-                        qo.Buffer = new byte[SerialPortObject.BytesToRead];
-                        qo.DataLength = SerialPortObject.Read(qo.Buffer, 0, qo.Buffer.Length);
-                        if (qo.DataLength > 0 && qo.Buffer.Length >= 1)
-                        {
-                            lock (lockObject)
-                            {
-                                BufferStream.AddRange(qo.Buffer);
-                            }
-                        }
-                        else
-                        {
-                            Thread.Sleep(5);
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(5);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString(), ex);
-
-                    Thread.Sleep(5);
-                }
-            }
-        }
-
         /// <summary>
         /// 断开
         /// </summary>
         public void Disconnect()
         {
-            if (_receiveWorker != null)
-            {
-                _receiveWorker.CancelAsync();
-                _receiveWorker = null;
-            }
-
             if (_resolveWorker != null)
             {
                 _resolveWorker.CancelAsync();
@@ -295,14 +253,16 @@ namespace SerialPortLib
 
             try
             {
-                SerialPortObject.Close();
+                SerialPortObject.Close();                
             }
             catch (Exception ex) { }
+            SerialPortObject = null;
         }
 
         public void SetPort(string portName, int baudRate = 115200, StopBits stopBits = StopBits.One, Parity parity = Parity.None, int readTimeout = -1, int writeTimeout = -1)
         {
             SerialPortObject = new SerialPort();
+            SerialPortObject.DataReceived += SerialPortObject_DataReceived;
             SerialPortObject.ErrorReceived += SerialPortObject_ErrorReceived;
             SerialPortObject.PortName = portName;
             SerialPortObject.BaudRate = baudRate;
@@ -312,12 +272,40 @@ namespace SerialPortLib
             SerialPortObject.WriteTimeout = writeTimeout;
         }
 
+        void SerialPortObject_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            try
+            {
+                if (IsConnected)
+                {
+                    //可以接收
+                    QueueObject qo = new QueueObject();
+                    qo.Buffer = new byte[SerialPortObject.BytesToRead];
+                    qo.DataLength = SerialPortObject.Read(qo.Buffer, 0, qo.Buffer.Length);
+                    if (qo.DataLength > 0 && qo.Buffer.Length >= 1)
+                    {
+                        lock (lockObject)
+                        {
+                            BufferStream.AddRange(qo.Buffer);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString(), ex);
+            }
+        }
+
         void SerialPortObject_ErrorReceived(object sender, SerialErrorReceivedEventArgs e)
         {
             logger.Error(e.EventType);
         }
     }
 
+    /// <summary>
+    /// 队列对象
+    /// </summary>
     public class QueueObject
     {
         public QueueObject() { }
@@ -336,6 +324,9 @@ namespace SerialPortLib
         public int DataLength { get; set; }
     }
 
+    /// <summary>
+    /// 消息适配器
+    /// </summary>
     public abstract class IMessageDataAdapter
     {
         /// <summary>
@@ -348,5 +339,72 @@ namespace SerialPortLib
         /// </summary>
         /// <returns></returns>
         public abstract byte[] Resolve();
+
+        /// <summary>
+        /// 在串口缓冲区实例中的第一个匹配项的索引。
+        /// </summary>
+        /// <param name="searchBytes">要查找的 System.Byte[]。</param>
+        /// <returns>如果找到该字节数组，则为 searchBytes 的索引位置；如果未找到该字节数组，则为 -1。如果 searchBytes 为 null 或者长度为0，则返回值为 -1。</returns>
+        public int SearchInBuffer(byte[] searchBytes)
+        {
+            if (SerialPortInputObject == null) { return -1; }
+            if (SerialPortInputObject.BufferStream == null) { return -1; }
+            if (searchBytes == null) { return -1; }
+            if (SerialPortInputObject.BufferStream.Count == 0) { return -1; }
+            if (searchBytes.Length == 0) { return -1; }
+            if (SerialPortInputObject.BufferStream.Count < searchBytes.Length) { return -1; }
+            for (int i = 0; i < SerialPortInputObject.BufferStream.Count - searchBytes.Length; i++)
+            {
+                if (SerialPortInputObject.BufferStream[i] == searchBytes[0])
+                {
+                    if (searchBytes.Length == 1) { return i; }
+                    bool flag = true;
+                    for (int j = 1; j < searchBytes.Length; j++)
+                    {
+                        if (SerialPortInputObject.BufferStream[i + j] != searchBytes[j])
+                        {
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if (flag) { return i; }
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 报告指定的 System.Byte[] 在此实例中的第一个匹配项的索引。
+        /// </summary>
+        /// <param name="srcBytes">被执行查找的 System.Byte[]。</param>
+        /// <param name="offsets">被执行查找的 System.Byte[]的偏移</param>
+        /// <param name="searchBytes">要查找的 System.Byte[]。</param>
+        /// <returns>如果找到该字节数组，则为 searchBytes 的索引位置；如果未找到该字节数组，则为 -1。如果 searchBytes 为 null 或者长度为0，则返回值为 -1。</returns>
+        public static int IndexOf(byte[] srcBytes, int offsets, byte[] searchBytes)
+        {
+            if (srcBytes == null) { return -1; }
+            if (searchBytes == null) { return -1; }
+            if (srcBytes.Length == 0) { return -1; }
+            if (searchBytes.Length == 0) { return -1; }
+            if (srcBytes.Length < searchBytes.Length) { return -1; }
+            for (int i = offsets; i < srcBytes.Length - searchBytes.Length; i++)
+            {
+                if (srcBytes[i] == searchBytes[0])
+                {
+                    if (searchBytes.Length == 1) { return i; }
+                    bool flag = true;
+                    for (int j = 1; j < searchBytes.Length; j++)
+                    {
+                        if (srcBytes[i + j] != searchBytes[j])
+                        {
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if (flag) { return i; }
+                }
+            }
+            return -1;
+        }
     }
 }
