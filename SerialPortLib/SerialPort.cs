@@ -254,6 +254,8 @@ namespace SerialPortLib
             }
             catch (Exception ex) { }
             SerialPortObject = null;
+
+            _bufferStream = new List<byte>();
         }
 
         public void SetPort(string portName, int baudRate = 115200, StopBits stopBits = StopBits.One, Parity parity = Parity.None, int readTimeout = -1, int writeTimeout = -1)
