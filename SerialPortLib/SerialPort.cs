@@ -141,9 +141,6 @@ namespace SerialPortLib
         /// </summary>
         public void Connect()
         {
-            //先断开连接
-            Disconnect();
-
             if (MessageDataAdapterObject == null)
             {
                 return;
