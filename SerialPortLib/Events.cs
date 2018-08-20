@@ -52,13 +52,13 @@ namespace SerialPortLib
         /// <summary>
         /// The data.
         /// </summary>
-        public readonly byte[] Data;
+        public readonly IMessageEntity Data;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SerialPortLib.MessageReceivedEventArgs"/> class.
         /// </summary>
         /// <param name="data">Data.</param>
-        public MessageReceivedEventArgs(byte[] data)
+        public MessageReceivedEventArgs(IMessageEntity data)
         {
             Data = data;
         }

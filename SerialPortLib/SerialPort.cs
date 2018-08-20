@@ -26,19 +26,14 @@ namespace SerialPortLib
     /// </summary>
     public class SerialPortInput
     {
-        private List<byte> _bufferStream = new List<byte>();
+        private DataBufferObject _bufferStream = new DataBufferObject();
         /// <summary>
         /// 接收缓冲
         /// </summary>
-        public List<byte> BufferStream
+        public DataBufferObject BufferStream
         {
             get { return _bufferStream; }
         }
-
-        /// <summary>
-        /// 同步锁对象
-        /// </summary>
-        public static object lockObject = new object();
 
         /// <summary>
         /// 日志对象
@@ -204,10 +199,10 @@ namespace SerialPortLib
                     if (IsConnected)
                     {
                         //可以接收
-                        if (BufferStream.Count > 0)
+                        if (BufferStream.Buffer.Count > 0)
                         {
-                            byte[] msg = MessageDataAdapterObject.Resolve();
-                            if (msg != null && msg.Length >= 1)
+                            IMessageEntity msg = MessageDataAdapterObject.Resolve();
+                            if (msg != null)
                             {
                                 OnMessageReceived(new MessageReceivedEventArgs(msg));
                             }
@@ -225,8 +220,6 @@ namespace SerialPortLib
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString(), ex);
-
-                    Thread.Sleep(5);
                 }
             }
         }
@@ -283,10 +276,7 @@ namespace SerialPortLib
                     qo.DataLength = SerialPortObject.Read(qo.Buffer, 0, qo.Buffer.Length);
                     if (qo.DataLength > 0 && qo.Buffer.Length >= 1)
                     {
-                        lock (lockObject)
-                        {
-                            BufferStream.AddRange(qo.Buffer);
-                        }
+                        BufferStream.AddRangeWithLock(qo.Buffer);
                     }
                 }
             }
@@ -337,40 +327,7 @@ namespace SerialPortLib
         /// 解析数据
         /// </summary>
         /// <returns></returns>
-        public abstract byte[] Resolve();
-
-        /// <summary>
-        /// 在串口缓冲区实例中的第一个匹配项的索引。
-        /// </summary>
-        /// <param name="searchBytes">要查找的 System.Byte[]。</param>
-        /// <returns>如果找到该字节数组，则为 searchBytes 的索引位置；如果未找到该字节数组，则为 -1。如果 searchBytes 为 null 或者长度为0，则返回值为 -1。</returns>
-        public int SearchInBuffer(byte[] searchBytes)
-        {
-            if (SerialPortInputObject == null) { return -1; }
-            if (SerialPortInputObject.BufferStream == null) { return -1; }
-            if (searchBytes == null) { return -1; }
-            if (SerialPortInputObject.BufferStream.Count == 0) { return -1; }
-            if (searchBytes.Length == 0) { return -1; }
-            if (SerialPortInputObject.BufferStream.Count < searchBytes.Length) { return -1; }
-            for (int i = 0; i < SerialPortInputObject.BufferStream.Count - searchBytes.Length; i++)
-            {
-                if (SerialPortInputObject.BufferStream[i] == searchBytes[0])
-                {
-                    if (searchBytes.Length == 1) { return i; }
-                    bool flag = true;
-                    for (int j = 1; j < searchBytes.Length; j++)
-                    {
-                        if (SerialPortInputObject.BufferStream[i + j] != searchBytes[j])
-                        {
-                            flag = false;
-                            break;
-                        }
-                    }
-                    if (flag) { return i; }
-                }
-            }
-            return -1;
-        }
+        public abstract IMessageEntity Resolve();
 
         /// <summary>
         /// 报告指定的 System.Byte[] 在此实例中的第一个匹配项的索引。
@@ -405,5 +362,51 @@ namespace SerialPortLib
             }
             return -1;
         }
+    }
+
+    /// <summary>
+    /// 解析出来的消息
+    /// </summary>
+    public class IMessageEntity
+    {
+        public IMessageEntity() { }
+
+        public IMessageEntity(byte[] buf, long id, long length, object tag)
+        {
+            Buffer = buf;
+            Id = id;
+            Length = length;
+            Tag = tag;
+        }
+
+        /// <summary>
+        /// 数据
+        /// </summary>
+        public byte[] Buffer { get; set; }
+
+        /// <summary>
+        /// ID
+        /// </summary>
+        public long Id { get; set; }
+
+        /// <summary>
+        /// 长度
+        /// </summary>
+        public long Length { get; set; }
+
+        /// <summary>
+        /// 附加数据
+        /// </summary>
+        public object Tag { get; set; }
+
+        /// <summary>
+        /// 附加数据
+        /// </summary>
+        public object Tag1 { get; set; }
+
+        /// <summary>
+        /// 附加数据
+        /// </summary>
+        public object Tag2 { get; set; }
     }
 }
