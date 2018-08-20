@@ -14,7 +14,7 @@ namespace Test.Serial
 
         public override IMessageEntity Resolve()
         {
-            DataBufferObject _recievedData = this.SerialPortInputObject.BufferStream;
+            DataBufferObject _recievedData = BufferStream;
             if (!resAssembling)
             {
                 while (headerIndex + 3 < _recievedData.Buffer.Count && !(_recievedData.Buffer[headerIndex] == 0xFD && _recievedData.Buffer[headerIndex + 1] == 0x00 && _recievedData.Buffer[headerIndex + 2] == 0x80 && _recievedData.Buffer[headerIndex + 3] == 0x00))

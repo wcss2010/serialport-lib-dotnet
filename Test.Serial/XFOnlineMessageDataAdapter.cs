@@ -15,7 +15,7 @@ namespace Test.Serial
 
         public override IMessageEntity Resolve()
         {
-            DataBufferObject _recievedData = this.SerialPortInputObject.BufferStream;
+            DataBufferObject _recievedData = BufferStream;
             try
             {
                 //尝试查找包头
