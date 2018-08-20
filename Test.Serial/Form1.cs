@@ -62,8 +62,8 @@ namespace Test.Serial
         private void Form1_Load(object sender, EventArgs e)
         {
             AIUIConnectionObj = new AIUIConnection("COM4");
-            AIUIConnectionObj.SerialPort.SerialPortObject.ReceivedBytesThreshold = 100;
-            AIUIConnectionObj.SerialPort.SerialPortObject.ReadBufferSize = 50 * 1024 * 10;
+            //AIUIConnectionObj.SerialPort.SerialPortObject.ReceivedBytesThreshold = 100;
+            //AIUIConnectionObj.SerialPort.SerialPortObject.ReadBufferSize = 50 * 1024 * 10;
             AIUIConnectionObj.AIUIConnectionReceivedEvent += AIUIConnectionObj_AIUIConnectionReceivedEvent;
             AIUIConnectionObj.SerialPort.Connect();
 

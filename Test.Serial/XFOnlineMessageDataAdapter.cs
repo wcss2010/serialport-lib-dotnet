@@ -65,9 +65,13 @@ namespace Test.Serial
                             if (msg[2] == 0x04)
                             {
                                 bytes = _recievedData.GetAndRemoveRangeWithLock(headerIndex + 7, length).ToArray();
+                                return new IMessageEntity(bytes, id, bytes.Length, null);
                             }
-
-                            return new IMessageEntity(bytes, id, bytes.Length, null);
+                            else
+                            {
+                                _recievedData.RemoveRangeWithLock(0, headerIndex + length + 8);
+                                return null;
+                            }
                         }
                         else
                         {

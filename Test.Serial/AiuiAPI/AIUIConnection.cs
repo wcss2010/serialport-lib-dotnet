@@ -25,11 +25,11 @@ namespace AIUISerials
 
     public class AIUIConnection
     {
-        private SerialPortInput _serialPort = null;
+        private SerialPortInputSimple _serialPort = null;
         /// <summary>
         /// 串口连接
         /// </summary>
-        public SerialPortInput SerialPort
+        public SerialPortInputSimple SerialPort
         {
             get { return _serialPort; }
         }
@@ -47,7 +47,7 @@ namespace AIUISerials
 
         public AIUIConnection(string comPort)
         {
-            _serialPort = new SerialPortInput();
+            _serialPort = new SerialPortInputSimple();
             _serialPort.MessageDataAdapterObject = new XFOnlineMessageDataAdapter();
             _serialPort.SetPort(comPort, 115200, System.IO.Ports.StopBits.One, System.IO.Ports.Parity.None, -1, -1);
             _serialPort.MessageReceived += _serialPort_MessageReceived;
