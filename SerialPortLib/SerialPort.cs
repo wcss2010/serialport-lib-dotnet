@@ -90,7 +90,10 @@ namespace SerialPortLib
         {
             if (EnabledPrintReceiveLog)
             {
-                logger.Debug(BitConverter.ToString(args.Data));
+                if (args.Data != null && args.Data.Buffer != null)
+                {
+                    logger.Debug(BitConverter.ToString(args.Data.Buffer));
+                }
             }
 
             if (MessageReceived != null)
@@ -248,7 +251,7 @@ namespace SerialPortLib
             catch (Exception ex) { }
             SerialPortObject = null;
 
-            _bufferStream = new List<byte>();
+            _bufferStream = new DataBufferObject();
         }
 
         public void SetPort(string portName, int baudRate = 115200, StopBits stopBits = StopBits.One, Parity parity = Parity.None, int readTimeout = -1, int writeTimeout = -1)
