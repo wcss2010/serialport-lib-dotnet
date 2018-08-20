@@ -12,19 +12,9 @@ using System.Collections.Generic;
 namespace SerialPortLib
 {
     /// <summary>
-    /// 连接状态事件
+    /// 串口通信类(仅包含重新连接线程)
     /// </summary>
-    public delegate void ConnectionStatusChangedEventHandler(object sender, ConnectionStatusChangedEventArgs args);
-
-    /// <summary>
-    /// 数据接收事件
-    /// </summary>
-    public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs args);
-
-    /// <summary>
-    /// 串口通信类
-    /// </summary>
-    public class SerialPortInput
+    public class SerialPortInputSimple
     {
         private DataBufferObject _bufferStream = new DataBufferObject();
         /// <summary>
@@ -65,7 +55,6 @@ namespace SerialPortLib
         /// </summary>
         public event MessageReceivedEventHandler MessageReceived;
 
-        protected BackgroundWorker _resolveWorker = null;
         protected BackgroundWorker _connectionWorker = null;
 
         /// <summary>
@@ -155,12 +144,6 @@ namespace SerialPortLib
             //打开串口
             SerialPortObject.Open();
 
-            //创建解析线程
-            _resolveWorker = new BackgroundWorker();
-            _resolveWorker.WorkerSupportsCancellation = true;
-            _resolveWorker.DoWork += _resolveWorker_DoWork;
-            _resolveWorker.RunWorkerAsync();
-
             //断开重连线程
             _connectionWorker = new BackgroundWorker();
             _connectionWorker.WorkerSupportsCancellation = true;
@@ -193,52 +176,11 @@ namespace SerialPortLib
             }
         }
 
-        void _resolveWorker_DoWork(object sender, DoWorkEventArgs e)
-        {
-            BackgroundWorker obj = (BackgroundWorker)sender;
-            while (!obj.CancellationPending)
-            {
-                try
-                {
-                    if (IsConnected)
-                    {
-                        //可以接收
-                        if (BufferStream.Buffer.Count > 0)
-                        {
-                            IMessageEntity msg = MessageDataAdapterObject.Resolve();
-                            if (msg != null)
-                            {
-                                OnMessageReceived(new MessageReceivedEventArgs(msg));
-                            }
-                        }
-                        else
-                        {
-                            Thread.Sleep(5);
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(5);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString(), ex);
-                }
-            }
-        }
-
         /// <summary>
         /// 断开
         /// </summary>
         public void Disconnect()
         {
-            if (_resolveWorker != null)
-            {
-                _resolveWorker.CancelAsync();
-                _resolveWorker = null;
-            }
-
             if (_connectionWorker != null)
             {
                 _connectionWorker.CancelAsync();
@@ -247,7 +189,7 @@ namespace SerialPortLib
 
             try
             {
-                SerialPortObject.Close();                
+                SerialPortObject.Close();
             }
             catch (Exception ex) { }
             SerialPortObject = null;
@@ -281,6 +223,11 @@ namespace SerialPortLib
                     if (qo.DataLength > 0 && qo.Buffer.Length >= 1)
                     {
                         BufferStream.AddRangeWithLock(qo.Buffer);
+                        IMessageEntity msg = MessageDataAdapterObject.Resolve();
+                        if (msg != null)
+                        {
+                            OnMessageReceived(new MessageReceivedEventArgs(msg));
+                        }
                     }
                 }
             }

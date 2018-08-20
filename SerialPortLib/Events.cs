@@ -93,7 +93,12 @@ namespace SerialPortLib
         /// <summary>
         /// 串口对象
         /// </summary>
-        public SerialPortInput SerialPortInputObject { get; set; }
+        public object SerialPortObject { get; set; }
+
+        /// <summary>
+        /// 缓冲区对象
+        /// </summary>
+        public DataBufferObject BufferStream { get; set; }
 
         /// <summary>
         /// 解析数据
