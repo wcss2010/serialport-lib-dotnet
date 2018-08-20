@@ -11,7 +11,7 @@ namespace SerialPortLib
     /// </summary>
     public class DataBufferObject
     {
-        private List<byte> _buffers = new List<byte>();
+        private List<byte> _buffer = new List<byte>();
         /// <summary>
         /// 缓冲区
         /// </summary>
