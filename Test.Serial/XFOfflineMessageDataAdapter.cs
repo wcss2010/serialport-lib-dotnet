@@ -12,44 +12,43 @@ namespace Test.Serial
         bool resAssembling = false;
         int headerIndex = 0;
 
-        public override byte[] Resolve()
+        public override IMessageEntity Resolve()
         {
-            List<byte> _recievedData = this.SerialPortInputObject.BufferStream;
+            DataBufferObject _recievedData = this.SerialPortInputObject.BufferStream;
             if (!resAssembling)
             {
-                while (headerIndex + 3 < _recievedData.Count && !(_recievedData[headerIndex] == 0xFD && _recievedData[headerIndex + 1] == 0x00 && _recievedData[headerIndex + 2] == 0x80 && _recievedData[headerIndex + 3] == 0x00))
+                while (headerIndex + 3 < _recievedData.Buffer.Count && !(_recievedData.Buffer[headerIndex] == 0xFD && _recievedData.Buffer[headerIndex + 1] == 0x00 && _recievedData.Buffer[headerIndex + 2] == 0x80 && _recievedData.Buffer[headerIndex + 3] == 0x00))
                 {
                     headerIndex++;
                 }
-                lock (SerialPortInput.lockObject)
-                {
-                    if (headerIndex >= _recievedData.Count)
+
+                    if (headerIndex >= _recievedData.Buffer.Count)
                     {
-                        _recievedData.Clear();
+                        _recievedData.ClearWithLock();
                     }
-                }
+                
                 resAssembling = true;
             }
 
-            if (headerIndex + 2 >= _recievedData.Count)
+            if (headerIndex + 2 >= _recievedData.Buffer.Count)
             {
                 Thread.Sleep(10);
             }
 
             // 帧长度=数据区长度+1
             int length = 264;
-            if (headerIndex + length > _recievedData.Count)
+            if (headerIndex + length > _recievedData.Buffer.Count)
             {
                 Thread.Sleep(10);
             }
 
-            if (_recievedData.Count >= 264)
+            if (_recievedData.Buffer.Count >= 264)
             {
-                return _recievedData.GetRange(headerIndex, 264).ToArray();
+                return new IMessageEntity(_recievedData.GetAndRemoveRangeWithLock(headerIndex, 264), 0, 264, null);
             }
             else
             {
-                return new byte[0];
+                return null;
             }
         }
     }

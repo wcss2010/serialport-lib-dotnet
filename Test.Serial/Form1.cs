@@ -124,7 +124,10 @@ namespace Test.Serial
 
         void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            HandleVoiceData(args.Data);
+            if (args.Data != null && args.Data.Buffer != null)
+            {
+                HandleVoiceData(args.Data.Buffer);
+            }
         }
 
         private void HandleVoiceData(byte[] data)

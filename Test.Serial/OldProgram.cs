@@ -66,7 +66,10 @@ namespace Test.Serial
 
         static void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            Console.WriteLine("Received message: {0}", BitConverter.ToString(args.Data));
+            if (args.Data != null && args.Data.Buffer != null)
+            {
+                Console.WriteLine("Received message: {0}", BitConverter.ToString(args.Data.Buffer));
+            }
             // On every message received we send an ACK message back to the device
             serialPort.SendMessage(new byte[] { 0x06 });
         }

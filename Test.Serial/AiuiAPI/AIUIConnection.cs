@@ -59,7 +59,10 @@ namespace AIUISerials
             try
             {
                 //投递消息事件
-                OnAIUIConnectionReceivedEvent(Utils.Decompress(args.Data));
+                if (args.Data != null && args.Data.Buffer != null)
+                {
+                    OnAIUIConnectionReceivedEvent(Utils.Decompress(args.Data.Buffer));
+                }
             }
             catch (Exception ex) { }
         }
